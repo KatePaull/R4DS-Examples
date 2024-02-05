@@ -1,0 +1,310 @@
+---
+title: "Chapter 3"
+code-overflow: wrap
+---
+
+Chapter 3 of R4DS teaches data transformation using packages (such as dplyr) within the tidyverse metapackage. This page will work through a subset of the chapter's prompts. I will use the nycflights13 dataset to go through some basic data cleaning procedures. I'll set up by loading the tidyverse and nycflights13 packages.
+
+```{r}
+pacman::p_load(tidyverse, nycflights13)
+```
+
+# 3.2.5 Exercises:
+
+## Exercise 3.2.5.1
+
+**In a single pipeline for each condition, find all flights that meet the condition:**
+
+**Had an arrival delay of two or more hours**
+
+Answer: 10,200 flights had a delay of 2+ hours
+
+```{r}
+flights %>% 
+  filter(arr_delay >= 120) %>% 
+  count()
+```
+
+**Flew to Houston (IAH or HOU)**
+
+Answer: 9,313 flights flew to Houston
+
+```{r}
+flights %>% 
+  filter(dest %in% c("IAH", "HOU")) %>% 
+  count()
+```
+
+**Were operated by United, American, or Delta**
+
+Answer: 139,504 flights were operated by these airlines
+
+```{r}
+flights %>% 
+  filter(carrier %in% c("UA", "AA", "DL")) %>% 
+  count()
+```
+
+**Departed in summer (July, August, and September)**
+
+Answer: 86,326 flights left during the summer
+
+```{r}
+flights %>% 
+  filter(month %in% c(7, 8, 9)) %>% 
+  count()
+```
+
+**Arrived more than two hours late, but didn’t leave late**
+
+Answer: 29 flights left on time and arrived 2+ hours late
+
+```{r}
+flights %>% 
+  filter(dep_delay <= 0, arr_delay > 120) %>% 
+  count()
+```
+
+**Were delayed by at least an hour, but made up over 30 minutes in flight**
+
+Answer: 1,844 flights left an hour late but made up 30 minutes in flight
+
+```{r}
+flights %>% 
+  filter(dep_delay >= 60 & dep_delay - arr_delay > 30) %>% 
+  count()
+```
+
+## Exercise 3.2.5.2
+
+Sort flights to find the flights with longest departure delays. Find the flights that left earliest in the morning.
+
+Answer: The longest delay was 1,301 minutes and many flights left at 12:01AM.
+
+```{r}
+flights %>% 
+  arrange(desc(dep_delay))
+```
+
+```{r}
+flights %>% 
+  arrange(dep_time)
+```
+
+## Exercise 3.2.5.3
+
+**Sort flights to find the fastest flights. (Hint: Try including a math calculation inside of your function.)**
+
+Answer: This is a trickier question than it might seem at first. With the coding skills developed in chapters 1-3, the easy solution would be to run the code below on tab 1, which subtracts dep_time from arr_time and then sorts the values in ascending order. I've retained the first 5 records for display.
+
+The problem with the easy way is that these columns are formatted as numbers, not times, and it generates nonsensical numbers, and sometimes produces negative numbers for flights that land the day after they depart. Look at the values in the flight_time column in tab 1. This method gives us the wrong answer because there are flights with small positive values that are actually the shortest, but we aren't finding them because we are focusing on flights that are at the top of the list because our simple formula produced negative values.
+
+If we do it the hard way, we need to account for the date change. To do this, I created datetime variables for both the departure and the arrival hours and minutes. This requires some modulus math ("%/%" and "%%") to get the times in a useful format, which is covered in R4DS Chapter 17. Once we have the departure and arrival times in dttm format, we can calculate the time difference (using difftime). We can then correct for instances where a flight lands the next day by revising any flights with negative difftimes, where we would then add one day to the value by adding 86,400 seconds (using if_else logic). Now, we can see the fastest flight in the dataset was 33 minutes.
+
+::: panel-tabset
+## Easy way
+
+```{r}
+flights %>% 
+  mutate(flight_time = arr_time - dep_time) %>% 
+  arrange(flight_time) %>% 
+  slice_head(n = 5) %>% 
+  select(year, month, day, dep_time, arr_time, flight_time)
+```
+
+## Hard way
+
+```{r}
+flights %>%
+  mutate(
+    dep_hour = dep_time %/% 100, #modulus math to obtain hour
+    dep_minute = dep_time %% 100,#modulus math to obtain minute
+    arr_hour = arr_time %/% 100, #modulus math to obtain hour
+    arr_minute = arr_time %% 100 #modulus math to obtain minute
+  ) %>%
+  mutate(departure_time_proper = as.POSIXct( #make dttm departure variable
+    make_datetime(year,
+                  month,
+                  day,
+                  dep_hour,
+                  dep_minute)
+    ),
+    arrival_time_proper = as.POSIXct( #make dttm arrival variable
+    make_datetime(year,
+                  month,
+                  day,
+                  arr_hour,
+                  arr_minute)
+    )) %>% 
+  #calculate difference between departure and arrival
+  mutate(difftime_pre = difftime(arrival_time_proper, 
+                                 departure_time_proper),
+         # then correct negative flight times by adding one day to flights
+         #that landed a day after they departed;
+         #note one day is equal to 86,400 seconds
+         arr_time_next_day_correction = if_else(difftime_pre < 0, 
+                                                arrival_time_proper + 86400,
+                                                arrival_time_proper),
+         #create revised difftime that accounts for flights landing next day
+         difftime_post = difftime(arr_time_next_day_correction, departure_time_proper)) %>% 
+  arrange(difftime_post) %>% #sort by shortest flights
+  slice_head(n = 5) %>% #keep 5 fastest flights for viewing purposes
+  relocate(year, month, day, dep_time, arr_time, difftime_post, .before = 1)
+```
+:::
+
+## Exercise 3.2.5.4
+
+Was there a flight on every day of 2013?
+
+4 answer: yes, there was a flight everyday in 2013. You can take a variety of approaches to solve this question. Here are two:
+
+::: panel-tabset
+## Method 1
+
+Below we see a list of flights with unique dates each month. We can skim through each month and see that there are flights everyday of the year, because the number of unique flight dates matches the number of days in each calendar month.
+
+*Note 2013 is not a leap year, so having 28 unique flight dates in February is consistent with there being 28 calendar days in the month that year.*
+
+```{r}
+flights %>% 
+  distinct(month, day) %>% 
+  group_by(month) %>% 
+  count()
+```
+
+## Method 2
+
+We can create a vector of dates ranging from 1/1/2013 - 12/31/2013. Then we can group the flight data by dates, select the first flight on each date, and join that record to the corresponding date in the date vector. We can then create a logical variable that tells us if each date does or does not have a corresponding flight record. Then we can summarize the logical variable's values. Since the code below returns n = 365 under "Flights Occurred Today", and returns no records under "No Flights Today", we can conclude that there was a flight everyday in 2013.
+
+```{r}
+flights_with_dep_date <- flights %>%
+  mutate(departure_date = as.POSIXct( #make dttm departure variable
+    make_date(year,
+              month,
+              day))) %>% 
+  group_by(departure_date) %>% 
+  slice_head()
+  
+tibble(seq(as.Date("2013/01/01"), by = "day", length.out = 365)) %>% 
+  rename(departure_date = 1) %>% 
+  left_join(flights_with_dep_date, by = "departure_date") %>% 
+  mutate(date_validation = if_else(is.na(day), "No Flights Today", "Flights Occurred Today")) %>% 
+  group_by(date_validation) %>% 
+  summarize(n = n())
+```
+:::
+
+## Exercise 3.2.5.5
+
+**Which flights traveled the farthest distance? Which traveled the least distance?**
+
+5 answer: flights from JFK (New York) to HNL (Hawaii) had the longest distance, which totaled 4,983 miles. Flights from EWR (New Jersey) to LGA (New York) traveled the shortest distance, which was 17 miles.
+
+```{r}
+flights %>% 
+  arrange(desc(distance)) %>% 
+  slice_head() %>% 
+  select(distance, origin, dest)
+
+flights %>% 
+  arrange(distance) %>% 
+  slice_head() %>% 
+  select(distance, origin, dest)
+```
+
+## Exercise 3.2.5.6
+
+**Does it matter what order you used filter() and arrange() if you’re using both? Why/why not? Think about the results and how much work the functions would have to do.**
+
+6 answer: No it does not matter because filter changes the rows that are present while arrange changes the order of the rows. You can do them in either order and the results will be the same.
+
+# 3.3.5 Exercises:
+
+## Exercise 3.3.5.1
+
+**Compare dep_time, sched_dep_time, and dep_delay. How would you expect those three numbers to be related?**
+
+1 answer: sched_dep_time is the time the flight was scheduled to leave while dep_time is when the flight actually departed. dep_delay is the difference between dep_time and sched_dep_time.
+
+## Exercise 3.3.5.2
+
+**Brainstorm as many ways as possible to select dep_time, dep_delay, arr_time, and arr_delay from flights.**
+
+2 answer: here are 4 ways complete this task:
+
+```{r}
+flights %>% 
+  select(dep_time, dep_delay, arr_time, arr_delay)
+
+flights %>% select(starts_with("dep") | starts_with("arr"))
+
+flights %>% 
+  select(ends_with("_time") | ends_with("delay")) %>% 
+  select(!starts_with("sched") & !starts_with("air"))
+  
+flights %>% 
+  select(!year:day & !sched_dep_time & !sched_arr_time & !carrier:time_hour)
+```
+
+## Exercise 3.3.5.3
+
+**What happens if you specify the name of the same variable multiple times in a select() call?**
+
+3 answer: that variable only shows up in one column regardless, this does not produce an error or cause it to be selected twice.
+
+```{r}
+flights %>% 
+  select(year, year)
+```
+
+## Exercise 3.3.5.4
+
+**What does the any_of() function do? Why might it be helpful in conjunction with this vector?**
+
+4 answer: it is a selection helper that allows us to select any variables with names matching those listed in the vector. It is similar to the "all_of" selection helper, but unlike "all_of", it won't generate an error if any element of the vector is missing from the dataset.
+
+```{r}
+variables <- c("year", "month", "day", "dep_delay", "arr_delay")
+
+flights %>% 
+  select(all_of(variables))
+```
+
+## Exercise 3.3.5.5
+
+**Does the result of running the following code surprise you? How do the select helpers deal with upper and lower case by default? How can you change that default?**
+
+5 answer: selection helpers in dplyr have ignore.case set to TRUE, meaning case will be ignored when searching for variable names that match the specified string. The default can be changed by setting ignore.case to FALSE.
+
+```{r}
+flights %>% select(contains("TIME"))
+
+flights %>%  select(contains("TIME", ignore.case = FALSE))
+```
+
+## Exercise 3.3.5.6
+
+**Rename air_time to air_time_min to indicate units of measurement and move it to the beginning of the data frame.**
+
+```{r}
+flights %>% 
+  rename(air_time_min = air_time) %>% 
+  relocate(air_time_min)
+```
+
+## Exercise 3.3.5.7
+
+**Why doesn’t the following work, and what does the error mean?**
+
+7 answer: the error means that arr_delay is not included in the dataset. This is because selecting tailnum removes every other variable, including arr_delay, from the dataset. This could be revised with the following code:
+
+```{r}
+# flights %>% 
+#   select(tailnum) %>% 
+#   arrange(arr_delay)
+
+flights %>% 
+  select(tailnum, arr_delay) %>% 
+  arrange(arr_delay)
+```

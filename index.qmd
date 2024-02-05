@@ -1,0 +1,13 @@
+---
+title: "R for Data Science (2e) Code Examples"
+---
+
+### Introduction
+
+This website contains my responses to certain questions in *R for Data Science (2e)* by Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. The purpose of this site is to show my ability to complete data cleaning and visualization tasks within R. Not all prompts in R4DS will have responses, and at times my responses will add additional code to modify aesthetics or will stray slightly from the prompts to be unique.
+
+*Note: copying and pasting these answers for academic purposes is discouraged. Writing your own code is how you improve as a data scientist. Honor system.*
+
+### References
+
+Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). R for Data Science: Import, Tidy, transform, visualize, and model data. O’Reilly. <https://r4ds.hadley.nz/>

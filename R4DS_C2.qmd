@@ -1,0 +1,46 @@
+---
+title: "Chapter 2"
+code-overflow: wrap
+---
+
+Chapter 2 of R4DS covers coding basics such as how to create objects, vectors, and comments. Its exercises emphasize the importance of correct spelling and syntax. This page will work through Chapter 2's prompts.
+
+# 2.5 Exercises:
+
+## Exercise 2.5.1
+
+**Why does this code not work?**
+
+1 answer: because the "i" in the 1st line is different than the 2nd line
+
+```{r}
+my_variable <- 10
+#my_varıable
+
+#Fix by using:
+my_variable
+```
+
+## Exercise 2.5.2
+
+**Tweak each of the following R commands so that they run correctly:**
+
+```{r}
+# libary(todyverse)
+
+# ggplot(dTA = mpg) +
+#  geom_point(maping = aes(x = displ y = hwy)) +
+#  geom_smooth(method = "lm)
+
+library(tidyverse)
+
+
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x) +
+  theme_classic() +
+  labs(
+    x = "Engine Displacement",
+    y = "Highway MPG")
+```
+

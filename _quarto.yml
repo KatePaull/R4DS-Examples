@@ -1,0 +1,26 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "R for Data Science Code Examples"
+  back-to-top-navigation: true
+  reader-mode: true
+  navbar:
+    collapse-level: 3
+    left:
+      - href: index.qmd
+        text: Home
+      - R4DS_C1.qmd
+      - R4DS_C2.qmd
+      - R4DS_C3.qmd
+      - R4DS_C7.qmd
+      
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+editor: visual
+
