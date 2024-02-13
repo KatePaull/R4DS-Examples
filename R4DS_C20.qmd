@@ -1,0 +1,49 @@
+---
+title: "Chapter 20"
+code-overflow: wrap
+---
+
+Chapter 20 of *R for Data Science* covers how to work with spreadsheets from Excel and Google Sheets. To get started, I'll load a few essential packages:
+
+```{r}
+pacman::p_load(tidyverse, readxl, writexl)
+```
+
+```{r}
+#write csv displayed in R4DS, for use in subsequent problems
+
+survey <- read_csv("survey_id, n_pets\n1, 0\n2, 1\n3, N/A\n4, two\n5, 2\n6, NA", quote = '', show_col_types = FALSE)
+
+survey
+
+write_xlsx(survey, path = "./survey.xlsx")
+```
+
+# 20.2.9 Exercises
+
+## Exercise 20.2.9.1
+
+**In an Excel file, create the following dataset and save it as survey.xlsx. Then, read it into R, with survey_id as a character variable and n_pets as a numerical variable.**
+
+```{r}
+#n_pets must start as character type to preserve the value "two" in the 4th row. We can replace this with "2" and then parse this column to create a numeric column type
+
+read_excel(path = "./survey.xlsx", col_types = "text") %>%
+  mutate(
+    n_pets = parse_number(if_else(n_pets == "two", "2", as.character(n_pets))))
+```
+
+## Exercise 20.2.9.2
+
+**In another Excel file, create the following dataset and save it as roster.xlsx**
+
+```{r}
+roster <- read_csv("group, subgroup, id\n1, A, 1\n,,2\n,,3\n, B, 4\n,, 5\n, , 6\n,, 7\n2, A, 8\n,, 9\n, B, 10\n,, 11\n,, 12", show_col_types = FALSE)
+
+roster
+
+write_xlsx(roster, path = "./roster.xlsx")
+
+read_excel("./roster.xlsx") %>% 
+  fill(everything())
+```
